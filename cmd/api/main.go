@@ -8,21 +8,34 @@ import (
 	"strconv"
 )
 
+
+
 func main() {
-	carsUsecase := CarsUsecase{
-		externalApi: NewExternalApi("https://example.co"),
-	}
+	carsRepo := // todo 
 	deps := Deps{
-		CarsUsecase: carsUsecase,
+		CarsUsecase:      carsUsecase,
+		UpdateCarUsecase: UpdateCarUsecase{
+			carsRepo: carsRepo,
+		},
+		DeleteCarUsecase: DeleteCarUsecase{
+			carsRepo: carsRepo,
+		},
+		AddCarUsecase:    AddCarUsecase{
+			externalApi: NewExternalApi("https://example.co"),
+			carsRepo:    carsRepo,
+		},
 	}
 	http.HandleFunc("GET /cars", deps.handleGetCars)
-	http.HandleFunc("DELETE /cars/{id}", deleteDataHandler)
-	http.HandleFunc("PATH /cars/{id}", updateDataHandler)
-	http.HandleFunc("POST /cars/{id}", addDataHandler)
+	http.HandleFunc("DELETE /cars/{regNum}", deps.handleDeleteCar)
+	http.HandleFunc("PATH /cars", deps.handleUpdateCar)
+	http.HandleFunc("POST /cars", deps.handleAddCar)
 }
 
 type Deps struct {
 	CarsUsecase
+	UpdateCarUsecase
+	DeleteCarUsecase
+	AddCarUsecase
 }
 
 func (d *Deps) handleGetCars(w http.ResponseWriter, r *http.Request) {
@@ -69,13 +82,13 @@ func (d *Deps) handleGetCars(w http.ResponseWriter, r *http.Request) {
 	}
 	cars, err := d.Cars(filter, pagination)
 	if err != nil {
-		text := fmt.Sprintf("handle get cars: %w", err)
+		text := fmt.Sprintf("get cars via usecase: %w", err)
 		http.Error(w, text, http.StatusBadRequest)
 		return
 	}
 	b, err := json.Marshal(cars)
 	if err != nil {
-		text := fmt.Sprintf("handle get cars: %w", err)
+		text := fmt.Sprintf("marshal response data: %w", err)
 		http.Error(w, text, http.StatusBadRequest)
 		return
 	}
@@ -85,42 +98,134 @@ func (d *Deps) handleGetCars(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func deleteDataHandler(w http.ResponseWriter, r *http.Request) {
-	r.URL.Query().Get()
+func (d *Deps) handleDeleteCar(w http.ResponseWriter, r *http.Request) {
+	regNum := r.PathValue("regNum")
+	err := d.DeleteCar(regNum)
+	if err != nil {
+		text := fmt.Sprintf("delete car via usecase: %w", err)
+		http.Error(w, text, http.StatusBadRequest)
+		return
+	}
 }
 
-func updateDataHandler(w http.ResponseWriter, r *http.Request) {
-	r.URL.Query().Get()
+func (d *Deps) handleUpdateCar(w http.ResponseWriter, r *http.Request) {
+	var input *UpdateCarInput
+	reader := json.NewDecoder(r.Body)
+	err := reader.Decode(input)
+	if err != nil {
+		text := fmt.Sprintf("decode request body: %w", err)
+		http.Error(w, text, http.StatusBadRequest)
+		return
+	}
+	err = d.UpdateCar(CarUpdate{
+		RegNum: input.RegNum,
+		Mark:   input.Mark,
+		Model:  input.Model,
+		Owner:  input.Owner,
+	})
+	if err != nil {
+		text := fmt.Sprintf("update car via usecase: %w", err)
+		http.Error(w, text, http.StatusBadRequest)
+		return
+	}
+
 }
 
-func addDataHandler(w http.ResponseWriter, r *http.Request) {
-	r.URL.Query().Get()
+type UpdateCarInput struct {
+	RegNum string  `json:"regNum"`
+	Mark   *string `json:"mark,omitempty"`
+	Model  *string `json:"model,omitempty"`
+	Owner  *string `json:"owner,omitempty"`
 }
 
-type AddCarUsecase struct{}
+func (d *Deps) handleAddCar(w http.ResponseWriter, r *http.Request) {
+	var input *AddCarInput
+	reader := json.NewDecoder(r.Body)
+	err := reader.Decode(input)
+	if err != nil {
+		text := fmt.Sprintf("decode request body: %w", err)
+		http.Error(w, text, http.StatusBadRequest)
+		return
+	}
 
-func (c *AddCarUsecase) AddCar() error {
-
+	for _, regNum := range input.RegNums {
+		// TODO: mb fetch errors
+		err := d.AddCar(regNum)
+		if err != nil {
+			text := fmt.Sprintf("add car via usecase: %w", err)
+			http.Error(w, text, http.StatusBadRequest)
+			return
+		}
+	}
 }
 
-type UpdateCarUsecase struct{}
+type AddCarInput struct {
+	RegNums []string `json:"regNums"`
+}
+
+type AddCarUsecase struct {
+	externalApi ExternalApi
+	carsRepo    CarsRepository
+}
+
+func (c *AddCarUsecase) AddCar(regNum string) error {
+	// TODO: validate input
+	info, exists, err := c.externalApi.RegNumInfo(regNum)
+	if err != nil {
+		return fmt.Errorf("update car in repo: %w", err)
+	}
+	if !exists {
+		return fmt.Errorf("not found info in external api")
+	}
+	err = c.carsRepo.Add(CarCreate{
+		RegNum: info.RegNum,
+		Mark:   info.Mark,
+		Model:  info.Model,
+		Owner:  info.Owner,
+	})
+	if err != nil {
+		return fmt.Errorf("add car to repo: %w", err)
+	}
+	return nil
+}
+
+type UpdateCarUsecase struct {
+	carsRepo CarsRepository
+}
 
 func (c *UpdateCarUsecase) UpdateCar(update CarUpdate) error {
-	// TODO
+	// TODO: validate fields
+	err := c.carsRepo.Update(update)
+	if err != nil {
+		return fmt.Errorf("update car in repo: %w", err)
+	}
+	return nil
 }
 
-type DeleteCarUsecase struct{}
+type DeleteCarUsecase struct {
+	carsRepo CarsRepository
+}
 
 func (c *DeleteCarUsecase) DeleteCar(regNum string) error {
-	// TODO
+	// TODO: check regNum exists
+	err := c.carsRepo.Delete(regNum)
+	if err != nil {
+		return fmt.Errorf("delete car from repo: %w", err)
+	}
+	return nil
 }
 
 type CarsUsecase struct {
-	externalApi *ExternalApi
+	carsRepo    CarsRepository
 }
 
 func (c *CarsUsecase) Cars(filter CarsFilter, pagination CarsPagination) ([]CarDomain, error) {
-	// TODO
+	// TODO: validation filter, pagination
+	cars, err := c.carsRepo.Cars(filter, pagination)
+	if err != nil {
+		return nil, fmt.Errorf("get cars from repo: %w", err)
+	}
+	return cars, nil
 }
 
 type CarUpdate struct {
@@ -166,23 +271,26 @@ func NewExternalApi(host string) *ExternalApi {
 	}
 }
 
-func (r *ExternalApi) RegNumInfo(regNum string) (*RegNumInfoResponse, error) {
+func (r *ExternalApi) RegNumInfo(regNum string) (*RegNumInfoResponse, bool, error) {
 	resp, err := http.Get(r.host + "/info?regNum=" + regNum)
 	if err != nil {
-		return nil, fmt.Errorf("get data from external api: %w", err)
+		return nil, false, fmt.Errorf("get data from external api: %w", err)
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, false, nil
 	}
 	var info *infoResponse
 	reader := json.NewDecoder(resp.Body)
 	err = reader.Decode(info)
 	if err != nil {
-		return nil, fmt.Errorf("decode response from external api: %w")
+		return nil, false, fmt.Errorf("decode response from external api: %w")
 	}
 	return &RegNumInfoResponse{
 		RegNum: info.RegNum,
 		Mark:   info.Mark,
 		Model:  info.Model,
 		Owner:  info.Owner,
-	}, nil
+	}, true, nil
 }
 
 type infoResponse struct {
@@ -190,4 +298,18 @@ type infoResponse struct {
 	Mark   string `json:"mark"`
 	Model  string `json:"model"`
 	Owner  string `json:"owner"`
+}
+
+type CarsRepository interface {
+	Cars(CarsFilter, CarsPagination) ([]CarDomain, error)
+	Add(CarCreate) error
+	Delete(regNum string) error
+	Update(CarUpdate) error
+}
+
+type CarCreate struct {
+	RegNum string
+	Mark   string
+	Model  string
+	Owner  string
 }
