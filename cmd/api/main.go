@@ -2,7 +2,9 @@ package main
 
 import (
 	"carstore/internal/data"
+	"carstore/internal/domain/model"
 	"carstore/internal/usecase"
+	"carstore/lib/extapi"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -11,19 +13,13 @@ import (
 )
 
 func main() {
-	// carsRepo := // todo
+	repo := data.NewCarRepoBase()
+	externalapi := extapi.NewExternalApi("https://example.co")
 	deps := Deps{
-		CarsUsecase: carsUsecase,
-		UpdateCarUsecase: UpdateCarUsecase{
-			carsRepo: carsRepo,
-		},
-		DeleteCarUsecase: DeleteCarUsecase{
-			carsRepo: carsRepo,
-		},
-		AddCarUsecase: AddCarUsecase{
-			externalApi: NewExternalApi("https://example.co"),
-			carsRepo:    carsRepo,
-		},
+		CarsUsecase:      usecase.NewCarsUsecase(repo),
+		UpdateCarUsecase: usecase.NewUpdateCarUsecase(repo),
+		DeleteCarUsecase: usecase.NewDeleteCarUsecase(repo),
+		AddCarUsecase:    usecase.NewAddCarUsecase(externalapi, repo),
 	}
 	http.HandleFunc("GET /cars", deps.handleGetCars)
 	http.HandleFunc("DELETE /cars/{regNum}", deps.handleDeleteCar)
@@ -32,16 +28,20 @@ func main() {
 }
 
 type Deps struct {
-	CarsUsecase
-	UpdateCarUsecase
-	DeleteCarUsecase
-	AddCarUsecase
+	*usecase.CarsUsecase
+	*usecase.UpdateCarUsecase
+	*usecase.DeleteCarUsecase
+	*usecase.AddCarUsecase
 }
 
 func (d *Deps) handleGetCars(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 
-	filter := CarsFilter{}
+	filter := model.CarsFilter{}
+	if query.Has("id") {
+		id := query.Get("id")
+		filter.Id = &id
+	}
 	if query.Has("regNum") {
 		regNum := query.Get("regNum")
 		filter.RegNum = &regNum
@@ -59,7 +59,7 @@ func (d *Deps) handleGetCars(w http.ResponseWriter, r *http.Request) {
 		filter.Owner = &owner
 	}
 
-	pagination := CarsPagination{}
+	pagination := model.CarsPagination{}
 	if query.Has("page") {
 		pageStr := query.Get("page")
 		page, err := strconv.Atoi(pageStr)
@@ -109,7 +109,7 @@ func (d *Deps) handleDeleteCar(w http.ResponseWriter, r *http.Request) {
 }
 
 func (d *Deps) handleUpdateCar(w http.ResponseWriter, r *http.Request) {
-	var input *UpdateCarInput
+	var input *updateCarInput
 	reader := json.NewDecoder(r.Body)
 	err := reader.Decode(input)
 	if err != nil {
@@ -117,7 +117,7 @@ func (d *Deps) handleUpdateCar(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, text, http.StatusBadRequest)
 		return
 	}
-	err = d.UpdateCar(CarUpdate{
+	err = d.UpdateCar(model.CarUpdate{
 		RegNum: input.RegNum,
 		Mark:   input.Mark,
 		Model:  input.Model,
@@ -131,15 +131,16 @@ func (d *Deps) handleUpdateCar(w http.ResponseWriter, r *http.Request) {
 
 }
 
-type UpdateCarInput struct {
-	RegNum string  `json:"regNum"`
-	Mark   *string `json:"mark,omitempty"`
-	Model  *string `json:"model,omitempty"`
-	Owner  *string `json:"owner,omitempty"`
+type updateCarInput struct {
+	Id     string  `json:"id"`
+	RegNum *string `json:"regNum"`
+	Mark   *string `json:"mark"`
+	Model  *string `json:"model"`
+	Owner  *string `json:"owner"`
 }
 
 func (d *Deps) handleAddCar(w http.ResponseWriter, r *http.Request) {
-	var input *AddCarInput
+	var input *addCarInput
 	reader := json.NewDecoder(r.Body)
 	err := reader.Decode(input)
 	if err != nil {
@@ -149,7 +150,7 @@ func (d *Deps) handleAddCar(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, regNum := range input.RegNums {
-		// TODO: mb fetch errors
+		// TODO: mb fetch errors?
 		err := d.AddCar(regNum)
 		if err != nil {
 			text := fmt.Sprintf("add car via usecase: %w", err)
@@ -159,6 +160,6 @@ func (d *Deps) handleAddCar(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-type AddCarInput struct {
+type addCarInput struct {
 	RegNums []string `json:"regNums"`
 }

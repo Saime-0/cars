@@ -11,14 +11,20 @@ type CarsUsecase struct {
 	carsRepo data.CarsRepository
 }
 
-func (c *CarsUsecase) Cars(filter model.CarsFilter, pagination model.CarsPagination) ([]model.CarDomain, error) {
+func NewCarsUsecase(repo data.CarsRepository) *CarsUsecase {
+	return &CarsUsecase{
+		carsRepo: repo,
+	}
+}
+
+func (c *CarsUsecase) Cars(filter model.CarsFilter, pagination model.CarsPagination) ([]model.Car, error) {
 	err := validateFilter(filter)
 	if err != nil {
 		return nil, fmt.Errorf("validation filter: %w", err)
 	}
 	err = validatePagination(pagination)
 	if err != nil {
-		return nil, fmt.Errorf("validation filter: %w", err)
+		return nil, fmt.Errorf("validation pagination: %w", err)
 	}
 	cars, err := c.carsRepo.Cars(filter, pagination)
 	if err != nil {
@@ -27,19 +33,30 @@ func (c *CarsUsecase) Cars(filter model.CarsFilter, pagination model.CarsPaginat
 	return cars, nil
 }
 
-var errMarkValidation = errors.New("mark incorrect")
-var errModelValidation = errors.New("model incorrect")
-var errOwnerValidation = errors.New("owner incorrect")
-
 func validateFilter(filter model.CarsFilter) error {
-	if filter.Mark != nil && len(*filter.Mark) < 1 {
-		return errMarkValidation
+	if filter.Id != nil {
+		err := validateId(*filter.Id)
+		if err != nil {
+			return err
+		}
 	}
-	if filter.Model != nil && len(*filter.Model) < 1 {
-		return errModelValidation
+	if filter.Mark != nil {
+		err := validateMark(*filter.Mark)
+		if err != nil {
+			return err
+		}
 	}
-	if filter.Owner != nil && len(*filter.Owner) < 1 {
-		return errOwnerValidation
+	if filter.Model != nil {
+		err := validateModel(*filter.Model)
+		if err != nil {
+			return err
+		}
+	}
+	if filter.Owner != nil {
+		err := validateOwner(*filter.Owner)
+		if err != nil {
+			return err
+		}
 	}
 	if filter.RegNum != nil {
 		err := validateRegNum(*filter.RegNum)

@@ -1,6 +1,15 @@
 package model
 
+type Car struct {
+	Id     string
+	RegNum string
+	Mark   string
+	Model  string
+	Owner  string
+}
+
 type CarCreate struct {
+	Id     string
 	RegNum string
 	Mark   string
 	Model  string
@@ -8,20 +17,15 @@ type CarCreate struct {
 }
 
 type CarUpdate struct {
-	RegNum string
+	Id     string
+	RegNum *string
 	Mark   *string
 	Model  *string
 	Owner  *string
 }
 
-type CarDomain struct {
-	RegNum string
-	Mark   string
-	Model  string
-	Owner  string
-}
-
 type CarsFilter struct {
+	Id     *string
 	RegNum *string
 	Mark   *string
 	Model  *string

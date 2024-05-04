@@ -5,11 +5,19 @@ import (
 	"carstore/internal/domain/model"
 	"carstore/lib/extapi"
 	"fmt"
+	"github.com/google/uuid"
 )
 
 type AddCarUsecase struct {
-	externalApi extapi.ExternalApi
+	externalApi *extapi.ExternalApi
 	carsRepo    data.CarsRepository
+}
+
+func NewAddCarUsecase(externalapi *extapi.ExternalApi, repo data.CarsRepository) *AddCarUsecase {
+	return &AddCarUsecase{
+		externalApi: externalapi,
+		carsRepo:    repo,
+	}
 }
 
 func (c *AddCarUsecase) AddCar(regNum string) error {
@@ -25,6 +33,7 @@ func (c *AddCarUsecase) AddCar(regNum string) error {
 		return fmt.Errorf("not found info in external api")
 	}
 	err = c.carsRepo.Add(model.CarCreate{
+		Id:     uuid.NewString(),
 		RegNum: info.RegNum,
 		Mark:   info.Mark,
 		Model:  info.Model,
