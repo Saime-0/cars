@@ -1,6 +1,8 @@
 package main
 
 import (
+	"carstore/internal/data"
+	"carstore/internal/usecase"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -8,19 +10,17 @@ import (
 	"strconv"
 )
 
-
-
 func main() {
-	carsRepo := // todo 
+	// carsRepo := // todo
 	deps := Deps{
-		CarsUsecase:      carsUsecase,
+		CarsUsecase: carsUsecase,
 		UpdateCarUsecase: UpdateCarUsecase{
 			carsRepo: carsRepo,
 		},
 		DeleteCarUsecase: DeleteCarUsecase{
 			carsRepo: carsRepo,
 		},
-		AddCarUsecase:    AddCarUsecase{
+		AddCarUsecase: AddCarUsecase{
 			externalApi: NewExternalApi("https://example.co"),
 			carsRepo:    carsRepo,
 		},
@@ -161,155 +161,4 @@ func (d *Deps) handleAddCar(w http.ResponseWriter, r *http.Request) {
 
 type AddCarInput struct {
 	RegNums []string `json:"regNums"`
-}
-
-type AddCarUsecase struct {
-	externalApi ExternalApi
-	carsRepo    CarsRepository
-}
-
-func (c *AddCarUsecase) AddCar(regNum string) error {
-	// TODO: validate input
-	info, exists, err := c.externalApi.RegNumInfo(regNum)
-	if err != nil {
-		return fmt.Errorf("update car in repo: %w", err)
-	}
-	if !exists {
-		return fmt.Errorf("not found info in external api")
-	}
-	err = c.carsRepo.Add(CarCreate{
-		RegNum: info.RegNum,
-		Mark:   info.Mark,
-		Model:  info.Model,
-		Owner:  info.Owner,
-	})
-	if err != nil {
-		return fmt.Errorf("add car to repo: %w", err)
-	}
-	return nil
-}
-
-type UpdateCarUsecase struct {
-	carsRepo CarsRepository
-}
-
-func (c *UpdateCarUsecase) UpdateCar(update CarUpdate) error {
-	// TODO: validate fields
-	err := c.carsRepo.Update(update)
-	if err != nil {
-		return fmt.Errorf("update car in repo: %w", err)
-	}
-	return nil
-}
-
-type DeleteCarUsecase struct {
-	carsRepo CarsRepository
-}
-
-func (c *DeleteCarUsecase) DeleteCar(regNum string) error {
-	// TODO: check regNum exists
-	err := c.carsRepo.Delete(regNum)
-	if err != nil {
-		return fmt.Errorf("delete car from repo: %w", err)
-	}
-	return nil
-}
-
-type CarsUsecase struct {
-	carsRepo    CarsRepository
-}
-
-func (c *CarsUsecase) Cars(filter CarsFilter, pagination CarsPagination) ([]CarDomain, error) {
-	// TODO: validation filter, pagination
-	cars, err := c.carsRepo.Cars(filter, pagination)
-	if err != nil {
-		return nil, fmt.Errorf("get cars from repo: %w", err)
-	}
-	return cars, nil
-}
-
-type CarUpdate struct {
-	RegNum string
-	Mark   *string
-	Model  *string
-	Owner  *string
-}
-
-type CarDomain struct {
-	RegNum string
-	Mark   string
-	Model  string
-	Owner  string
-}
-
-type CarsFilter struct {
-	RegNum *string
-	Mark   *string
-	Model  *string
-	Owner  *string
-}
-
-type CarsPagination struct {
-	Page    int
-	PerPage int
-}
-
-type RegNumInfoResponse struct {
-	RegNum string
-	Mark   string
-	Model  string
-	Owner  string
-}
-
-type ExternalApi struct {
-	host string
-}
-
-func NewExternalApi(host string) *ExternalApi {
-	return &ExternalApi{
-		host: host,
-	}
-}
-
-func (r *ExternalApi) RegNumInfo(regNum string) (*RegNumInfoResponse, bool, error) {
-	resp, err := http.Get(r.host + "/info?regNum=" + regNum)
-	if err != nil {
-		return nil, false, fmt.Errorf("get data from external api: %w", err)
-	}
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, false, nil
-	}
-	var info *infoResponse
-	reader := json.NewDecoder(resp.Body)
-	err = reader.Decode(info)
-	if err != nil {
-		return nil, false, fmt.Errorf("decode response from external api: %w")
-	}
-	return &RegNumInfoResponse{
-		RegNum: info.RegNum,
-		Mark:   info.Mark,
-		Model:  info.Model,
-		Owner:  info.Owner,
-	}, true, nil
-}
-
-type infoResponse struct {
-	RegNum string `json:"regNum"`
-	Mark   string `json:"mark"`
-	Model  string `json:"model"`
-	Owner  string `json:"owner"`
-}
-
-type CarsRepository interface {
-	Cars(CarsFilter, CarsPagination) ([]CarDomain, error)
-	Add(CarCreate) error
-	Delete(regNum string) error
-	Update(CarUpdate) error
-}
-
-type CarCreate struct {
-	RegNum string
-	Mark   string
-	Model  string
-	Owner  string
 }
