@@ -11,8 +11,9 @@ var errMarkValidation = errors.New("mark incorrect")
 var errModelValidation = errors.New("model incorrect")
 var errOwnerValidation = errors.New("owner incorrect")
 
-var regNumRegexp = regexp.MustCompile("/^[АВЕКМНОРСТУХ]\\d{3}(?<!000)[АВЕКМНОРСТУХ]{2}\\d{2,3}$/ui")
+var regNumRegexp = regexp.MustCompile("^[АВЕКМНОРСТУХ][0-9]{3}[АВЕКМНОРСТУХ]{2}[0-9]{2,3}$")
 
+// "^[АВЕКМНОРСТУХ]\\d{3}(?<!000)[АВЕКМНОРСТУХ]{2}\\d{2,3}$")
 func validateRegNum(regNum string) error {
 	if !regNumRegexp.Match([]byte(regNum)) {
 		return errRegNumValidation
