@@ -16,26 +16,11 @@ func NewExternalApi(host string) *ExternalApi {
 	}
 }
 
-func (r *ExternalApi) RegNumInfo(regNum string) (*RegNumInfoResponse, bool, error) {
-	resp, err := http.Get(r.host + "/info?regNum=" + regNum)
-	if err != nil {
-		return nil, false, fmt.Errorf("get data from external api: %w", err)
-	}
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, false, nil
-	}
-	var info *infoResponse
-	reader := json.NewDecoder(resp.Body)
-	err = reader.Decode(info)
-	if err != nil {
-		return nil, false, fmt.Errorf("decode response from external api: %w", err)
-	}
-	return &RegNumInfoResponse{
-		RegNum: info.RegNum,
-		Mark:   info.Mark,
-		Model:  info.Model,
-		Owner:  info.Owner,
-	}, true, nil
+type RegNumInfoResponse struct {
+	RegNum string
+	Mark   string
+	Model  string
+	Owner  string
 }
 
 type infoResponse struct {
@@ -45,9 +30,24 @@ type infoResponse struct {
 	Owner  string `json:"owner"`
 }
 
-type RegNumInfoResponse struct {
-	RegNum string
-	Mark   string
-	Model  string
-	Owner  string
+func (r *ExternalApi) RegNumInfo(regNum string) (*RegNumInfoResponse, bool, error) {
+	resp, err := http.Get(r.host + "/info?regNum=" + regNum)
+	if err != nil {
+		return nil, false, fmt.Errorf("get data from external api: %w", err)
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, false, nil
+	}
+	var info infoResponse
+	reader := json.NewDecoder(resp.Body)
+	err = reader.Decode(&info)
+	if err != nil {
+		return nil, false, fmt.Errorf("decode response from external api: %w", err)
+	}
+	return &RegNumInfoResponse{
+		RegNum: info.RegNum,
+		Mark:   info.Mark,
+		Model:  info.Model,
+		Owner:  info.Owner,
+	}, true, nil
 }

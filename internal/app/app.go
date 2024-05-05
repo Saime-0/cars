@@ -1,6 +1,7 @@
 package app
 
 import (
+	"carstore/internal/controller/extapiv1"
 	"carstore/internal/controller/httpv1"
 	"carstore/internal/data"
 	"carstore/internal/usecase"
@@ -13,7 +14,7 @@ import (
 
 func Run(ctx context.Context) error {
 	repo := data.NewCarRepoBase()
-	externalapi := extapi.NewExternalApi("https://example.co")
+	externalapi := extapi.NewExternalApi("http://0.0.0.0:63440")
 	uc := usecasesImpls{
 		CarsUsecase:      usecase.NewCarsUsecase(repo),
 		UpdateCarUsecase: usecase.NewUpdateCarUsecase(repo),
@@ -21,13 +22,23 @@ func Run(ctx context.Context) error {
 		AddCarUsecase:    usecase.NewAddCarUsecase(externalapi, repo),
 	}
 	app := newApplication(ctx, uc)
-	hc := httpv1.NewHttpController(httpv1.Usecases{
-		CarsUsecase:      uc.CarsUsecase,
-		UpdateCarUsecase: uc.UpdateCarUsecase,
-		DeleteCarUsecase: uc.DeleteCarUsecase,
-		AddCarUsecase:    uc.AddCarUsecase,
-	})
+
+	eac := extapiv1.NewExternalApiController(
+		extapiv1.Config{ServerPort: "63440"},
+	)
+	go app.runController(eac, "ExternalApiController")
+
+	hc := httpv1.NewHttpController(
+		httpv1.Config{ServerPort: "37546"},
+		httpv1.Usecases{
+			CarsUsecase:      uc.CarsUsecase,
+			UpdateCarUsecase: uc.UpdateCarUsecase,
+			DeleteCarUsecase: uc.DeleteCarUsecase,
+			AddCarUsecase:    uc.AddCarUsecase,
+		},
+	)
 	go app.runController(hc, "HttpController")
+
 	return app.gracefulShutdownApplication()
 }
 

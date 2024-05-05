@@ -20,10 +20,14 @@ type Usecases struct { // не стал делать интерфейсы для
 	*usecase.AddCarUsecase
 }
 
-func NewHttpController(uc Usecases) *HttpController {
+type Config struct {
+	ServerPort string
+}
+
+func NewHttpController(cfg Config, uc Usecases) *HttpController {
 	var mux = http.NewServeMux()
 	httpServer := &http.Server{
-		Addr:           "0.0.0.0:37546",
+		Addr:           "0.0.0.0:" + cfg.ServerPort,
 		Handler:        mux,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,

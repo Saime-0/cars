@@ -5,7 +5,7 @@ import (
 	"carstore/internal/domain/model"
 	"carstore/lib/extapi"
 	"fmt"
-	"github.com/google/uuid"
+	"math/rand"
 )
 
 type AddCarUsecase struct {
@@ -27,13 +27,13 @@ func (c *AddCarUsecase) AddCar(regNum string) error {
 	}
 	info, exists, err := c.externalApi.RegNumInfo(regNum)
 	if err != nil {
-		return fmt.Errorf("update car in repo: %w", err)
+		return fmt.Errorf("get info from external api: %w", err)
 	}
 	if !exists {
 		return fmt.Errorf("not found info in external api")
 	}
 	err = c.carsRepo.Add(model.CarCreate{
-		Id:     uuid.NewString(),
+		Id:     fmt.Sprintf("%03d", rand.Intn(1000)),
 		RegNum: info.RegNum,
 		Mark:   info.Mark,
 		Model:  info.Model,

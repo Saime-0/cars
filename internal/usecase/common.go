@@ -21,24 +21,29 @@ func validateRegNum(regNum string) error {
 	return nil
 }
 
+var idRegexp = regexp.MustCompile("^[0-9]{3}$")
+
 func validateId(id string) error {
-	if len(id) < 1 {
+	if !idRegexp.Match([]byte(id)) {
 		return errIdValidation
 	}
 	return nil
 }
+
 func validateMark(mark string) error {
 	if len(mark) < 1 {
 		return errMarkValidation
 	}
 	return nil
 }
+
 func validateModel(model string) error {
 	if len(model) < 1 {
 		return errModelValidation
 	}
 	return nil
 }
+
 func validateOwner(owner string) error {
 	if len(owner) < 1 {
 		return errOwnerValidation

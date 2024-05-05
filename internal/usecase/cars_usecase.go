@@ -71,10 +71,10 @@ var errPageValidation = errors.New("page incorrect")
 var errPerPageValidation = errors.New("perPage incorrect")
 
 func validatePagination(pagination model.CarsPagination) error {
-	if pagination.Page < 0 {
+	if pagination.Page < 1 {
 		return errPageValidation
 	}
-	if pagination.PerPage < 0 {
+	if pagination.PerPage < 1 {
 		return errPerPageValidation
 	}
 	return nil
