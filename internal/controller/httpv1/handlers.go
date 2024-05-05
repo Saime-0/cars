@@ -69,13 +69,13 @@ func (d *HttpController) handleGetCars(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err = w.Write(b)
 	if err != nil {
-		log.Printf("handle get cars: %w", err)
+		log.Printf("write get cars response: %s", err)
 	}
 }
 
 func (d *HttpController) handleDeleteCar(w http.ResponseWriter, r *http.Request) {
-	regNum := r.PathValue("regNum")
-	err := d.uc.DeleteCar(regNum)
+	id := r.PathValue("id")
+	err := d.uc.DeleteCar(id)
 	if err != nil {
 		err = fmt.Errorf("delete car via usecase: %w", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -93,6 +93,7 @@ func (d *HttpController) handleUpdateCar(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	err = d.uc.UpdateCar(model.CarUpdate{
+		Id:     input.Id,
 		RegNum: input.RegNum,
 		Mark:   input.Mark,
 		Model:  input.Model,

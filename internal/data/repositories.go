@@ -3,7 +3,6 @@ package data
 import (
 	"carstore/internal/domain/model"
 	"errors"
-	"log"
 	"math/rand"
 	"sync"
 	"time"
@@ -52,7 +51,7 @@ func (c *CarRepoBase) Cars(f model.CarsFilter, p model.CarsPagination) ([]model.
 		return nil, err
 	}
 
-	result := make([]model.Car, 0, 10)
+	result := []model.Car{}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	for _, car := range c.cars {
@@ -64,23 +63,7 @@ func (c *CarRepoBase) Cars(f model.CarsFilter, p model.CarsPagination) ([]model.
 			result = append(result, car)
 		}
 	}
-	// return result, nil
-	inBounds := func(v int) int {
-		return max(0, min(v, len(result)-1))
-	}
-	last := inBounds(p.Page*p.PerPage - 1)
-	first := inBounds(last - p.PerPage + 1)
-	// last := max(0, len(result)-1, offset+limit-1)
-	// first := min(0, last, offset)
-	log.Printf("first i = %d", first)
-	log.Printf("last i = %d", last)
-	return result[first:last], nil
-
-	// firstIndex := max(0, min(len(result), (p.Page-1)*p.PerPage))
-	// lastIndex := max(0, min(len(result), p.Page*p.PerPage)-1)
-	// log.Printf("first i = %d", firstIndex)
-	// log.Printf("last i = %d", lastIndex)
-	// return result[firstIndex:lastIndex], nil
+	return paginate(result, p.Page, p.PerPage), nil
 }
 
 func (c *CarRepoBase) Delete(id string) error {

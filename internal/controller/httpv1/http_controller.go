@@ -63,7 +63,7 @@ func registerHttpServerRoutes(mux *http.ServeMux, hc *HttpController) {
 	// функциями принимающими зависимости (юзкейсы или другие небходимые вещи)...
 	// и вовзвращающие замыкание (функцию-хендлер)
 	mux.HandleFunc("GET /cars", hc.handleGetCars)
-	mux.HandleFunc("DELETE /cars/{regNum}", hc.handleDeleteCar)
+	mux.HandleFunc("DELETE /cars/{id}", hc.handleDeleteCar)
 	mux.HandleFunc("PATH /cars", hc.handleUpdateCar)
 	mux.HandleFunc("POST /cars", hc.handleAddCar)
 }
